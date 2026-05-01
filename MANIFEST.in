@@ -1,0 +1,2 @@
+recursive-include minigrad/backend_ndarray *.cc *.cu
+include README.md

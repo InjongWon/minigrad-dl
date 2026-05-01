@@ -1,0 +1,4 @@
+# Editable install: pip install -e ".[dev]"  (see pyproject.toml)
+numpy>=1.20
+pybind11>=2.13
+pytest>=7

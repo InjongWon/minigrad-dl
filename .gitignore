@@ -1,0 +1,7 @@
+.venv/
+minigrad/backend_ndarray/build/
+build/
+dist/
+*.egg-info/
+*.so
+*.dylib

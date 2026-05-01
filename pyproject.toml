@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=65", "wheel", "pybind11>=2.13"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minigrad"
+version = "0.1.0"
+description = "MiniGrad — deep learning system from scratch (CMU 10-714 style)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "pybind11>=2.13",
+]
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["minigrad*"]
+exclude = ["minigrad.tests*"]

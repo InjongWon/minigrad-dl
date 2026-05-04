@@ -1,24 +1,14 @@
 """
 apps/train_cifar.py
-====================
-Train ResNet-9 on CIFAR-10 using the MiniGrad framework.
-
-Usage:
-  python apps/train_cifar.py --data data/cifar-10-batches-py \\
-                              --epochs 20 --lr 0.01 --batch_size 128
-
-Expected accuracy after 20 epochs: ~88-91% (varies by seed / hardware).
-
-No PyTorch / TensorFlow — pure MiniGrad.
 """
 import argparse
 import sys
 import os
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-import minigrad
 import minigrad.nn as nn
 import minigrad.optim as optim
 from minigrad.autograd import Tensor
@@ -30,7 +20,6 @@ def evaluate(model, loader):
     model.eval()
     correct = total = 0
     for imgs, labels in loader:
-        logits, _ = model(imgs), None  # ResNet9 returns logits directly
         logits = model(imgs)
         preds = np.argmax(logits.numpy(), axis=1)
         lbls = labels.numpy()
@@ -43,26 +32,26 @@ def evaluate(model, loader):
 def train(args):
     print(f"Training ResNet-9 on CIFAR-10  ({args.epochs} epochs, lr={args.lr})")
 
-    # Data
     transform = lambda x: RandomCrop(4)(RandomFlipHorizontal()(x))
     train_ds = CIFAR10Dataset(args.data, train=True, transform=transform)
     test_ds = CIFAR10Dataset(args.data, train=False)
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=256, shuffle=False)
 
-    print(f"  Train size: {len(train_ds)} | Test size: {len(test_ds)}")
-
-    # Model
     model = ResNet9()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
     loss_fn = nn.SoftmaxLoss()
+
+    # Track for plotting
+    epoch_losses = []
+    test_accs = []
 
     best_acc = 0.0
     for epoch in range(1, args.epochs + 1):
         model.train()
         epoch_loss = 0.0
         t0 = time.time()
-        for batch_idx, (imgs, labels) in enumerate(train_loader):
+        for imgs, labels in train_loader:
             logits = model(imgs)
             loss = loss_fn(logits, labels)
             optimizer.reset_grad()
@@ -70,18 +59,42 @@ def train(args):
             optimizer.step()
             epoch_loss += loss.numpy().item()
 
+        avg_loss = epoch_loss / len(train_loader)
         test_acc = evaluate(model, test_loader)
         best_acc = max(best_acc, test_acc)
+
+        epoch_losses.append(avg_loss)
+        test_accs.append(100 * test_acc)
+
         elapsed = time.time() - t0
         print(
             f"  Epoch {epoch:3d}/{args.epochs} | "
-            f"Loss: {epoch_loss / len(train_loader):.4f} | "
+            f"Loss: {avg_loss:.4f} | "
             f"Test acc: {100 * test_acc:.2f}% | "
             f"Best: {100 * best_acc:.2f}% | "
             f"Time: {elapsed:.1f}s"
         )
 
     print(f"\nFinal best test accuracy: {100 * best_acc:.2f}%")
+
+    # Save plot
+    os.makedirs("assets", exist_ok=True)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+
+    ax1.plot(epoch_losses, color='steelblue')
+    ax1.set_title("Training Loss")
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("Loss")
+
+    ax2.plot(test_accs, color='seagreen')
+    ax2.set_title("Test Accuracy")
+    ax2.set_xlabel("Epoch")
+    ax2.set_ylabel("Accuracy (%)")
+
+    plt.suptitle("ResNet-9 on CIFAR-10 — MiniGrad (no PyTorch)")
+    plt.tight_layout()
+    plt.savefig("assets/training_curve.png", dpi=150)
+    print("Saved training curve to assets/training_curve.png")
 
 
 if __name__ == "__main__":
